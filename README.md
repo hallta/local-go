@@ -6,7 +6,7 @@ Mini redirector service
 
 1. `python3 -m venv env`
 1. `source env/bin/activate`
-1. `flask --app amin run`
+1. `flask --app main run`
 
 # Configiure
 
