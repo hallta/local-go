@@ -1,4 +1,5 @@
 from flask import Flask, abort,request, redirect
+import json
 
 app = Flask(__name__)
 redir_map = {}
@@ -6,6 +7,11 @@ redir_map = {}
 @app.errorhandler(404)
 def not_found(e):
     return "URL not found"
+
+
+@app.route("/go/👀")
+def show_config():
+    return json.dumps(redir_map, indent=2)
 
 
 @app.route("/go/<string:path>")
