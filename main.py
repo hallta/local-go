@@ -1,5 +1,5 @@
 # Import required Flask modules and JSON for configuration handling
-from flask import Flask, abort, request, redirect
+from flask import Flask, abort, request, redirect, make_response
 import json
 from typing import Dict, Optional
 from pathlib import Path
@@ -13,7 +13,8 @@ CONFIG_FILE = Path("config")
 # Custom 404 error handler
 @app.errorhandler(404)
 def not_found(_) -> str:
-    return "URL not found"
+    response = make_response("URL not found", 404)
+    return response
 
 # Special route to view all configured redirects
 # Access via /go/👀
