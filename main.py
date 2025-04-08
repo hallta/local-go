@@ -1,61 +1,72 @@
 # Import required Flask modules and JSON for configuration handling
-from flask import Flask, abort,request, redirect
+from flask import Flask, abort, request, redirect
 import json
+from typing import Dict, Optional
+from pathlib import Path
 
 # Initialize Flask application
 app = Flask(__name__)
 # Dictionary to store path-to-URL mappings in memory
-redir_map = {}
+redirect_map: Dict[str, str] = {}
+CONFIG_FILE = Path("config")
 
 # Custom 404 error handler
 @app.errorhandler(404)
-def not_found(e):
+def not_found(_) -> str:
     return "URL not found"
 
 # Special route to view all configured redirects
 # Access via /go/👀
 @app.route("/go/👀")
-def show_config():
-    return json.dumps(redir_map, indent=2)
+def show_config() -> str:
+    return json.dumps(redirect_map, indent=2)
 
 # Main redirect route
 # Handles requests like /go/gh -> redirects to configured URL
 @app.route("/go/<string:path>")
-def go(path):
-    if path in redir_map:
-        return redirect("https://" + redir_map[path], code=302)
-    else:
-        abort(404)
+def go(path: str):
+    if path in redirect_map:
+        return redirect(f"https://{redirect_map[path]}", code=302)
+    abort(404)
 
 # Endpoint to save new redirect mappings
 # Usage: /save?p=shortcut&u=url
 # Example: /save?p=gh&u=github.com
 @app.route('/save')
-def save():
+def save() -> str:
     # Get path (shortcut) and URL from query parameters
-    path = request.args.get('p')
-    url = request.args.get('u')
+    shortcut: Optional[str] = request.args.get('p')
+    url: Optional[str] = request.args.get('u')
+    
+    if not all([shortcut, url]):
+        abort(400, "Missing required parameters 'p' (shortcut) or 'u' (url)")
+    
     # Store in memory
-    redir_map[path] = url
+    redirect_map[shortcut] = url
 
     # Append to config file for persistence
-    config = open('config', 'a')
-    config.write(path + ':' + url + "\n")
-    config.close()
+    with CONFIG_FILE.open('a') as config:
+        config.write(f"{shortcut}:{url}\n")
 
     return "👍"
 
 # Load redirect mappings from config file into memory
-def load_config():
-    with open("config", "r") as config:
-        for option in config:
-            # Split each line into path and URL
-            path, url = option.split(':', 1)
-            # Store in memory, removing trailing newline
-            redir_map[path] = url.rstrip()
+def load_config() -> None:
+    if not CONFIG_FILE.exists():
+        CONFIG_FILE.touch()
+        return
+        
+    with CONFIG_FILE.open("r") as config:
+        for line in config:
+            try:
+                shortcut, url = line.strip().split(':', 1)
+                redirect_map[shortcut] = url
+            except ValueError:
+                # Skip malformed lines
+                continue
 
 # Initialize the application by loading config
-def startup():
+def startup() -> None:
     load_config()
 
 # Run startup when module is imported
